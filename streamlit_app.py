@@ -48,26 +48,31 @@ else:
     st.info("엑셀 또는 CSV 파일을 업로드하거나 최신 파일을 사용하세요.")
 
 # 지도 시각화 버튼
-if df is not None and st.button('현황 지도 보기'):
-    if '위도' in df.columns and '경도' in df.columns and '상태' in df.columns:
-        # 센서 위치를 표시할 지도 생성
-        m = folium.Map(location=[df['위도'].mean(), df['경도'].mean()], zoom_start=12)
+if df is not None:
+    if st.button('현황 지도 보기'):
+        if '위도' in df.columns and '경도' in df.columns and '상태' in df.columns:
+            st.info("지도를 생성하고 있습니다...")  # 버튼이 눌렸는지 확인하는 메시지
+            
+            # 센서 위치를 표시할 지도 생성
+            m = folium.Map(location=[df['위도'].mean(), df['경도'].mean()], zoom_start=12)
 
-        # 마커 클러스터 생성
-        marker_cluster = MarkerCluster().add_to(m)
-        
-        # 센서 데이터에 따라 마커 추가
-        for idx, row in df.iterrows():
-            folium.Marker(
-                location=[row['위도'], row['경도']],
-                popup=f"상태: {row['상태']}",
-                icon=folium.Icon(color=get_marker_color(row['상태']))
-            ).add_to(marker_cluster)
-        
-        # 지도를 HTML로 변환
-        map_html = m._repr_html_()
-        
-        # Streamlit에서 HTML을 사용하여 지도 표시
-        st.components.v1.html(map_html, width=700, height=500)
-    else:
-        st.error("데이터에 '위도', '경도', '상태' 컬럼이 필요합니다.")
+            # 마커 클러스터 생성
+            marker_cluster = MarkerCluster().add_to(m)
+
+            # 센서 데이터에 따라 마커 추가
+            for idx, row in df.iterrows():
+                folium.Marker(
+                    location=[row['위도'], row['경도']],
+                    popup=f"상태: {row['상태']}",
+                    icon=folium.Icon(color=get_marker_color(row['상태']))
+                ).add_to(marker_cluster)
+
+            # 지도를 HTML로 변환
+            map_html = m._repr_html_()
+
+            # Streamlit에서 HTML을 사용하여 지도 표시
+            st.components.v1.html(map_html, width=700, height=500)
+        else:
+            st.error("데이터에 '위도', '경도', '상태' 컬럼이 필요합니다.")
+else:
+    st.info("데이터를 먼저 업로드해야 지도를 볼 수 있습니다.")
