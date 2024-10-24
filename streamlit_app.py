@@ -13,16 +13,19 @@ def get_marker_color(status):
     else:
         return 'blue'  # 기타 상태에 대한 기본 색상
 
-# H3 경계를 지도에 그리는 함수
-def draw_h3_boundaries(map_object, lat, lon, resolution=5):
-    # 최신 h3 라이브러리의 latlng_to_cell 사용
-    h3_index = h3.latlng_to_cell(lat, lon, resolution)
-    # H3 인덱스에 대한 경계 좌표 계산 (geo_json 매개변수 없이)
-    boundary = h3.cell_to_boundary(h3_index)
-    # 경계 좌표를 Folium PolyLine으로 변환
-    boundary_coords = [(lat, lon) for lat, lon in boundary]
-    # 경계를 지도에 그리기
-    folium.PolyLine(boundary_coords, color="orange", weight=2, opacity=0.6).add_to(map_object)
+# H3 경계를 지도에 그리는 함수 (총센서수와 연결상태별로 표시)
+def draw_h3_boundaries(map_object, boundary_coords, total_count, normal_count, disc_count):
+    # 경계를 더 두껍고 짙게 그리기
+    folium.PolyLine(boundary_coords, color="darkred", weight=4, opacity=0.8).add_to(map_object)
+    # H3 경계 중심에 센서 개수를 굵고 크게 표시
+    lat_center = sum([lat for lat, lon in boundary_coords]) / len(boundary_coords)
+    lon_center = sum([lon for lat, lon in boundary_coords]) / len(boundary_coords)
+    label = f'{total_count} ({normal_count} normal / {disc_count} disc.)'
+    folium.Marker(
+        location=[lat_center, lon_center],
+        popup=f"센서 수: {label}",
+        icon=folium.DivIcon(html=f'<div style="font-size: 14pt; font-weight: bold; color: darkblue">{label}</div>')
+    ).add_to(map_object)
 
 # 'df'가 세션 상태에 없으면 None으로 초기화
 if 'df' not in st.session_state:
@@ -64,19 +67,47 @@ if st.session_state.df is not None:
                 # 지도 생성
                 m = folium.Map(location=[st.session_state.df['위도'].mean(), st.session_state.df['경도'].mean()], zoom_start=12)
 
-                # 클러스터링 추가
+                # 마커 클러스터링 설정
                 marker_cluster = MarkerCluster().add_to(m)
 
-                # 센서 데이터에 따라 마커 추가 및 H3 경계 표시
+                # H3 인덱스별로 센서들을 클러스터링하기 위한 딕셔너리
+                h3_dict = {}
+
+                # 센서 데이터에 따라 H3 인덱스 계산 및 센서 개수 클러스터링
                 for idx, row in st.session_state.df.iterrows():
+                    lat, lon = row['위도'], row['경도']
+                    # H3 인덱스 계산
+                    h3_index = h3.latlng_to_cell(lat, lon, 5)  # 해상도 5 사용
+                    if h3_index not in h3_dict:
+                        h3_dict[h3_index] = {
+                            'total_count': 0,
+                            'normal_count': 0,
+                            'disc_count': 0,
+                            'coords': h3.cell_to_boundary(h3_index)
+                        }
+                    h3_dict[h3_index]['total_count'] += 1
+                    if row['연결상태'] == 'normal':
+                        h3_dict[h3_index]['normal_count'] += 1
+                    elif row['연결상태'] == 'disc.':
+                        h3_dict[h3_index]['disc_count'] += 1
+
+                    # 각 센서 설치 위치에 마커 추가 (클러스터링)
                     folium.Marker(
-                        location=[row['위도'], row['경도']],
+                        location=[lat, lon],
                         popup=f"연결상태: {row['연결상태']}",
                         icon=folium.Icon(color=get_marker_color(row['연결상태']))
                     ).add_to(marker_cluster)
-                    
-                    # H3 경계 그리기
-                    draw_h3_boundaries(m, row['위도'], row['경도'], resolution=5)
+
+                # H3 경계 및 센서 개수를 지도에 표시
+                for h3_index, data in h3_dict.items():
+                    boundary_coords = [(lat, lon) for lat, lon in data['coords']]
+                    draw_h3_boundaries(
+                        m,
+                        boundary_coords,
+                        data['total_count'],
+                        data['normal_count'],
+                        data['disc_count']
+                    )
 
                 # 지도를 HTML로 변환
                 map_html = m._repr_html_()
