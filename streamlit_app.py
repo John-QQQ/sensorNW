@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from folium.plugins import MarkerCluster
+import h3  # 최신 h3 라이브러리
 
 # 지도에 사용할 색상 함수
 def get_marker_color(status):
@@ -11,6 +12,17 @@ def get_marker_color(status):
         return 'red'
     else:
         return 'blue'  # 기타 상태에 대한 기본 색상
+
+# H3 경계를 지도에 그리는 함수
+def draw_h3_boundaries(map_object, lat, lon, resolution=5):
+    # 최신 h3 라이브러리의 latlng_to_cell 사용
+    h3_index = h3.latlng_to_cell(lat, lon, resolution)
+    # H3 인덱스에 대한 경계 좌표 계산 (geo_json 매개변수 없이)
+    boundary = h3.cell_to_boundary(h3_index)
+    # 경계 좌표를 Folium PolyLine으로 변환
+    boundary_coords = [(lat, lon) for lat, lon in boundary]
+    # 경계를 지도에 그리기
+    folium.PolyLine(boundary_coords, color="orange", weight=2, opacity=0.6).add_to(map_object)
 
 # 'df'가 세션 상태에 없으면 None으로 초기화
 if 'df' not in st.session_state:
@@ -35,13 +47,8 @@ if uploaded_file is not None:
 # '최신파일로 사용하기' 버튼 클릭 시 'Sensor_data_1024.csv' 파일 로드
 if st.button('최신파일로 사용하기'):
     try:
-        # 파일 로드 확인
         st.write("최신 파일을 사용 중입니다.")
-        
-        # 파일 경로를 명확하게 설정
         st.session_state.df = pd.read_csv('Sensor_data_1024.csv')
-        
-        # 파일 내용 확인
         st.subheader('최신 파일 데이터')
         st.write(st.session_state.df.head())
     except Exception as e:
@@ -56,15 +63,20 @@ if st.session_state.df is not None:
             try:
                 # 지도 생성
                 m = folium.Map(location=[st.session_state.df['위도'].mean(), st.session_state.df['경도'].mean()], zoom_start=12)
+
+                # 클러스터링 추가
                 marker_cluster = MarkerCluster().add_to(m)
 
-                # 센서 데이터에 따라 마커 추가
+                # 센서 데이터에 따라 마커 추가 및 H3 경계 표시
                 for idx, row in st.session_state.df.iterrows():
                     folium.Marker(
                         location=[row['위도'], row['경도']],
                         popup=f"연결상태: {row['연결상태']}",
                         icon=folium.Icon(color=get_marker_color(row['연결상태']))
                     ).add_to(marker_cluster)
+                    
+                    # H3 경계 그리기
+                    draw_h3_boundaries(m, row['위도'], row['경도'], resolution=5)
 
                 # 지도를 HTML로 변환
                 map_html = m._repr_html_()
