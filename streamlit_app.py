@@ -4,6 +4,12 @@ import folium
 from folium.plugins import MarkerCluster
 import h3
 from openai import OpenAI
+from docx import Document
+from io import BytesIO
+
+# 제목과 부제 추가
+st.title("SKT MEMS센서 메타데이터 관리")
+st.subheader("자연어 명령어를 통해 손쉽게 MEMS를 검색하세요")
 
 # OpenAI API 키 설정
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -134,9 +140,7 @@ def generate_filter_condition(user_query, columns):
                {"role": "user", "content": f"데이터프레임의 다음 컬럼으로 필터링할 조건을 만들어 주세요:\n\n{columns}\n\n사용자 요청: '{user_query}'\n\n주석이나 설명 없이 순수한 코드만 반환해 주세요."}
            ]
        )
-       # Use dot notation to access the message content
        filter_code = response.choices[0].message.content.strip()
-       # Validate and clean the code before execution
        filter_code_lines = filter_code.splitlines()
        executable_code = filter_code_lines[0].strip() if filter_code_lines else ""
        return executable_code
@@ -151,13 +155,49 @@ if st.session_state.df is not None:
         filter_code = generate_filter_condition(user_query, st.session_state.df.columns.tolist())
         if filter_code:
             try:
-                # st.session_state.df를 df라는 이름으로 참조
                 df = st.session_state.df
-                
-                # Safely evaluate the expression using eval()
-                filtered_df = eval(filter_code)  # Assuming filter_code is safe and correct to eval directly
+                filtered_df = eval(filter_code)
                 st.subheader("필터링된 데이터")
                 st.write(filtered_df)
+                
+               # 필터링된 데이터를 Word로 저장
+                if st.button("필터링된 데이터를 MS Word로 저장"):
+                    doc = Document()
+                    doc.add_heading("필터링된 MEMS 센서 데이터", 0)
+                    
+                    # 예시 파일과 유사한 형식으로 데이터 추가
+                    for _, row in filtered_df.iterrows():
+                        doc.add_paragraph("단말번호: " + str(row.get("단말번호", "")))
+                        doc.add_paragraph("관측소 코드: " + str(row.get("관측소 코드", "")))
+                        doc.add_paragraph("시설구분: " + str(row.get("시설구분", "")))
+                        doc.add_paragraph("시설구분세부: " + str(row.get("시설구분세부", "")))
+                        doc.add_paragraph("제조사: " + str(row.get("제조사", "")))
+                        doc.add_paragraph("설치시점: " + str(row.get("설치시점", "")))
+                        doc.add_paragraph("연결상태: " + str(row.get("연결상태", "")))
+                        doc.add_paragraph("주소: " + str(row.get("주소", "")))
+                        doc.add_paragraph("위도: " + str(row.get("위도", "")))
+                        doc.add_paragraph("경도: " + str(row.get("경도", "")))
+                        doc.add_paragraph("고도: " + str(row.get("고도", "")))
+                        doc.add_paragraph("설치층: " + str(row.get("설치층", "")))
+                        doc.add_paragraph("전체층: " + str(row.get("전체층", "")))
+                        doc.add_paragraph("축보정: " + str(row.get("축보정", "")))
+                        doc.add_paragraph("H3 Cell: " + str(row.get("H3 Cell", "")))
+                        doc.add_paragraph("센서 품질: " + str(row.get("센서 품질", "")))
+                        doc.add_paragraph("통신 품질: " + str(row.get("통신 품질", "")))
+                        doc.add_paragraph("H3혼잡여부: " + str(row.get("H3혼잡여부", "")))
+                        doc.add_paragraph("센서 교체 필요 여부: " + str(row.get("센서 교체 필요 여부", "")))
+                        doc.add_paragraph("통신 품질 안정 여부: " + str(row.get("통신 품질 안정 여부", "")))
+                        doc.add_paragraph("현장 설치 사진: " + str(row.get("현장 설치 사진", "")))
+                        doc.add_paragraph("\n" + "-"*40 + "\n")
+                    
+                    # 임시 버퍼에 저장
+                    buffer = BytesIO()
+                    doc.save(buffer)
+                    buffer.seek(0)
+                    
+                    st.success("데이터가 MS Word 파일로 저장되었습니다.")
+                    st.download_button("다운로드: 필터링된 데이터 Word 파일", data=buffer, file_name="filtered_sensor_data.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    
             except SyntaxError as se:
                 st.error(f"구문 오류 발생: {se}")
             except Exception as e_eval:
