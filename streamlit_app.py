@@ -3,7 +3,7 @@ import pandas as pd
 import folium
 from folium.plugins import MarkerCluster
 import h3
-import openai  # OpenAI API 사용
+import openai
 
 # OpenAI API 키 설정
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -62,40 +62,38 @@ if st.button('최신파일로 사용하기'):
     except Exception as e:
         st.error(f'최신 파일 불러오기 중 오류 발생: {e}')
 
-
 # 데이터 필터링을 위한 사용자 입력받기
 st.subheader("데이터 필터링")
+
+def generate_filter_condition(user_query, columns):
+   try:
+       response = openai.ChatCompletion.create(
+           model="gpt-3.5-turbo",
+           messages=[
+               {"role": "system", "content": "데이터프레임을 분석하여 필터링 조건을 생성하는 전문가입니다."},
+               {"role": "user", "content": f"데이터프레임의 다음 컬럼으로 필터링할 조건을 만들어 주세요:\n\n{columns}\n\n사용자 요청: '{user_query}'\n\n파이썬 pandas 코드로 필터 조건을 작성해 주세요."}
+           ]
+       )
+       filter_code = response['choices'][0]['message']['content'].strip()
+       return filter_code
+   except Exception as e:
+       st.error(f"필터링 처리 중 오류 발생: {e}")
+       return None
 
 # 데이터가 있는 경우에만 필터링 기능 실행
 if st.session_state.df is not None:
     user_query = st.text_input("데이터 필터링을 위한 자연어 명령을 입력하세요")
-
     if user_query:
-        try:
-            # ChatCompletion 사용하여 필터링 조건 생성
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # 또는 gpt-4 모델
-                messages=[
-                    {"role": "system", "content": "데이터프레임을 분석하여 필터링 조건을 생성하는 전문가입니다."},
-                    {"role": "user", "content": f"데이터프레임의 다음 컬럼으로 필터링할 조건을 만들어 주세요:\n\n{st.session_state.df.columns.tolist()}\n\n사용자 요청: '{user_query}'\n\n파이썬 pandas 코드로 필터 조건을 작성해 주세요."}
-                ]
-            )
-            
-            # GPT의 응답을 코드로 받아 처리
-            filter_code = response['choices'][0]['message']['content'].strip()
-
-            # 필터링 조건 실행
-            filtered_df = st.session_state.df.query(filter_code)
-            
-            # 필터링 결과 표시
-            st.subheader("필터링된 데이터")
-            st.write(filtered_df)
-            
-        except Exception as e:
-            st.error(f"필터링 처리 중 오류 발생: {e}")
+        filter_code = generate_filter_condition(user_query, st.session_state.df.columns.tolist())
+        if filter_code:
+            try:
+                filtered_df = st.session_state.df.query(filter_code)
+                st.subheader("필터링된 데이터")
+                st.write(filtered_df)
+            except Exception as e:
+                st.error(f"필터링 코드 실행 중 오류 발생: {e}")
 else:
     st.warning("데이터를 먼저 업로드해주세요.")
-
 
 # 지도 시각화 버튼
 if st.session_state.df is not None:
