@@ -6,6 +6,10 @@ import h3
 from openai import OpenAI
 from docx import Document
 from io import BytesIO
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from io import BytesIO
 
 # 제목과 부제 추가
 st.title("SKT MEMS센서 메타데이터 관리")
@@ -166,29 +170,111 @@ if st.session_state.df is not None:
                     doc.add_heading("필터링된 MEMS 센서 데이터", 0)
                     
                     # 예시 파일과 유사한 형식으로 데이터 추가
-                    for _, row in filtered_df.iterrows():
-                        doc.add_paragraph("단말번호: " + str(row.get("단말번호", "")))
-                        doc.add_paragraph("관측소 코드: " + str(row.get("관측소 코드", "")))
-                        doc.add_paragraph("시설구분: " + str(row.get("시설구분", "")))
-                        doc.add_paragraph("시설구분세부: " + str(row.get("시설구분세부", "")))
-                        doc.add_paragraph("제조사: " + str(row.get("제조사", "")))
-                        doc.add_paragraph("설치시점: " + str(row.get("설치시점", "")))
-                        doc.add_paragraph("연결상태: " + str(row.get("연결상태", "")))
-                        doc.add_paragraph("주소: " + str(row.get("주소", "")))
-                        doc.add_paragraph("위도: " + str(row.get("위도", "")))
-                        doc.add_paragraph("경도: " + str(row.get("경도", "")))
-                        doc.add_paragraph("고도: " + str(row.get("고도", "")))
-                        doc.add_paragraph("설치층: " + str(row.get("설치층", "")))
-                        doc.add_paragraph("전체층: " + str(row.get("전체층", "")))
-                        doc.add_paragraph("축보정: " + str(row.get("축보정", "")))
-                        doc.add_paragraph("H3 Cell: " + str(row.get("H3 Cell", "")))
-                        doc.add_paragraph("센서 품질: " + str(row.get("센서 품질", "")))
-                        doc.add_paragraph("통신 품질: " + str(row.get("통신 품질", "")))
-                        doc.add_paragraph("H3혼잡여부: " + str(row.get("H3혼잡여부", "")))
-                        doc.add_paragraph("센서 교체 필요 여부: " + str(row.get("센서 교체 필요 여부", "")))
-                        doc.add_paragraph("통신 품질 안정 여부: " + str(row.get("통신 품질 안정 여부", "")))
-                        doc.add_paragraph("현장 설치 사진: " + str(row.get("현장 설치 사진", "")))
-                        doc.add_paragraph("\n" + "-"*40 + "\n")
+                    for idx, row in filtered_df.iterrows():
+                    # 6열 x 10행 테이블 생성
+                        table = doc.add_table(rows=10, cols=6)
+                        table.style = 'Table Grid'
+                        table.alignment = WD_TABLE_ALIGNMENT.CENTER  # 테이블을 페이지 가운데 정렬
+
+                    
+                    # 중앙 정렬 함수
+                        def center_align(cell):
+                            for paragraph in cell.paragraphs:
+                                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        
+                        # 1행: 단말번호
+                        table.cell(0, 0).text = "단말번호"
+                        cell = table.cell(0, 1).merge(table.cell(0, 5))
+                        cell.text = str(row.get("단말번호", ""))
+                        center_align(table.cell(0, 0))
+                        center_align(cell)
+                        
+                        # 2행: 관측소 코드, 시설구분, 시설구분세부
+                        table.cell(1, 0).text = "관측소 코드"
+                        table.cell(1, 1).text = str(row.get("관측소 코드", ""))
+                        table.cell(1, 2).text = "시설구분"
+                        table.cell(1, 3).text = str(row.get("시설구분", ""))
+                        table.cell(1, 4).text = "시설구분세부"
+                        table.cell(1, 5).text = str(row.get("시설구분세부", ""))
+                        for col in range(6):
+                            center_align(table.cell(1, col))
+                        
+                        # 3행: 제조사, 설치시점, 연결상태
+                        table.cell(2, 0).text = "제조사"
+                        table.cell(2, 1).text = str(row.get("제조사", ""))
+                        table.cell(2, 2).text = "설치시점"
+                        table.cell(2, 3).text = str(row.get("설치시점", ""))
+                        table.cell(2, 4).text = "연결상태"
+                        table.cell(2, 5).text = str(row.get("연결상태", ""))
+                        for col in range(6):
+                            center_align(table.cell(2, col))
+                        
+                        # 4행: 주소
+                        table.cell(3, 0).text = "주소"
+                        cell = table.cell(3, 1).merge(table.cell(3, 5))
+                        cell.text = str(row.get("주소", ""))
+                        center_align(table.cell(3, 0))
+                        center_align(cell)
+                        
+                        # 5행: 위도, 경도, 고도
+                        table.cell(4, 0).text = "위도"
+                        table.cell(4, 1).text = str(row.get("위도", ""))
+                        table.cell(4, 2).text = "경도"
+                        table.cell(4, 3).text = str(row.get("경도", ""))
+                        table.cell(4, 4).text = "고도"
+                        table.cell(4, 5).text = str(row.get("고도", ""))
+                        for col in range(6):
+                            center_align(table.cell(4, col))
+                        
+                        # 6행: 설치층, 전체층, 축보정
+                        table.cell(5, 0).text = "설치층"
+                        table.cell(5, 1).text = str(row.get("설치층", ""))
+                        table.cell(5, 2).text = "전체층"
+                        table.cell(5, 3).text = str(row.get("전체층", ""))
+                        table.cell(5, 4).text = "축보정"
+                        table.cell(5, 5).text = str(row.get("축보정", ""))
+                        for col in range(6):
+                            center_align(table.cell(5, col))
+                        
+                        # 7행: H3 Cell, 센서 품질, 통신 품질
+                        table.cell(6, 0).text = "H3 Cell"
+                        table.cell(6, 1).text = str(row.get("H3 Cell", ""))
+                        table.cell(6, 2).text = "센서 품질"
+                        table.cell(6, 3).text = str(row.get("센서 품질", ""))
+                        table.cell(6, 4).text = "통신 품질"
+                        table.cell(6, 5).text = str(row.get("통신 품질", ""))
+                        for col in range(6):
+                            center_align(table.cell(6, col))
+                        
+                        # 8행: H3 혼잡여부, 센서 교체 필요 여부, 통신 품질 안정 여부
+                        table.cell(7, 0).text = "H3 혼잡여부"
+                        table.cell(7, 1).text = str(row.get("H3_Category", ""))
+                        table.cell(7, 2).text = "센서 교체 필요 여부"
+                        table.cell(7, 3).text = str(row.get("Sensor_Replacement_Status", ""))
+                        table.cell(7, 4).text = "통신 품질 안정 여부"
+                        table.cell(7, 5).text = str(row.get("Communication_Quality_Status", ""))
+                        for col in range(6):
+                            center_align(table.cell(7, col))
+                        
+                        # 9행: 현장 설치 사진
+                        table.cell(8, 0).text = "현장 설치 사진"
+                        cell = table.cell(8, 1).merge(table.cell(8, 5))
+                        cell.text = "사진 링크: " + str(row.get("현장 설치 사진", ""))
+                        center_align(table.cell(8, 0))
+                        center_align(cell)
+                        
+                        # 10행: #Image_link1, #Image_link2
+                        cell = table.cell(9, 0).merge(table.cell(9, 2))
+                        cell.text = str(row.get("현장 설치 사진", "#Image_link1"))
+                        center_align(cell)
+                        
+                        cell = table.cell(9, 3).merge(table.cell(9, 5))
+                        cell.text = str(row.get("현장 설치 사진", "#Image_link2"))
+                        center_align(cell)
+                        
+                        # 페이지 나누기
+                        if idx < len(filtered_df) -1 :
+                            doc.add_page_break()
                     
                     # 임시 버퍼에 저장
                     buffer = BytesIO()
