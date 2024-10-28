@@ -57,6 +57,11 @@ if uploaded_file is not None:
             st.session_state.df = pd.read_csv(uploaded_file)
         else:
             st.session_state.df = pd.read_excel(uploaded_file, engine='openpyxl')
+
+        # '단말번호'를 항상 11자리 문자열로 변환
+        if '단말번호' in st.session_state.df.columns:
+            st.session_state.df['단말번호'] = st.session_state.df['단말번호'].astype(str).str.zfill(11)
+
         st.subheader('업로드된 데이터')
         st.write(st.session_state.df)
     except Exception as e:
@@ -67,6 +72,11 @@ if st.button('최신파일로 사용하기'):
     try:
         st.write("최신 파일을 사용 중입니다.")
         st.session_state.df = pd.read_csv('Sensor_data_1024.csv')
+
+        # '단말번호'를 항상 11자리 문자열로 변환
+        if '단말번호' in st.session_state.df.columns:
+            st.session_state.df['단말번호'] = st.session_state.df['단말번호'].astype(str).str.zfill(11)
+
         st.subheader('최신 파일 데이터')
         st.write(st.session_state.df.head())
     except Exception as e:
