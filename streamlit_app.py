@@ -16,7 +16,7 @@ st.title("SKT MEMS센서 메타데이터 관리")
 st.subheader("자연어 명령어를 통해 손쉽게 MEMS를 검색하세요")
 
 # OpenAI API 키 설정
-client = OpenAI(api_key="sk-g8G3aP8FxRDPePJ7UStDfGMsOQCC9YM9axnrtYYGBjT3BlbkFJ8wK-u1I5sCWY7EL2tvotwyzW3GyT-FhyX24e8krrIA")
+client = OpenAI(api_key="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")
 
 # 지도에 사용할 색상 함수
 def get_marker_color(status):
